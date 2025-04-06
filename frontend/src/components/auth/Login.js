@@ -11,14 +11,23 @@ import {
   Link,
   InputAdornment,
   IconButton,
-  Avatar
+  Avatar,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { Visibility, VisibilityOff, LockOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import authService from '../../services/authService';
 
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -66,12 +75,21 @@ const Login = () => {
               password: Yup.string()
                 .required('Şifre gereklidir')
             })}
-            onSubmit={(values) => {
-              console.log(values);
-              navigate('/dashboard');
+            onSubmit={async (values, { setSubmitting }) => {
+              try {
+                const response = await authService.login(values);
+                if (response.success) {
+                  navigate('/dashboard');
+                }
+              } catch (err) {
+                setError(err.message || 'Giriş yapılırken bir hata oluştu');
+                setOpenSnackbar(true);
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
+            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
               <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
                 <TextField
                   margin="normal"
@@ -132,6 +150,7 @@ const Login = () => {
                   type="submit"
                   fullWidth
                   variant="contained"
+                  disabled={isSubmitting}
                   sx={{
                     mt: 3,
                     mb: 2,
@@ -145,7 +164,7 @@ const Login = () => {
                     }
                   }}
                 >
-                  Giriş Yap
+                  {isSubmitting ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                 </Button>
 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
@@ -169,6 +188,17 @@ const Login = () => {
           </Formik>
         </Paper>
       </Box>
+
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

@@ -11,14 +11,23 @@ import {
   Link,
   InputAdornment,
   IconButton,
-  Avatar
+  Avatar,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { Visibility, VisibilityOff, PersonAddOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import authService from '../../services/authService';
 
 const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [notification, setNotification] = useState({ message: '', severity: 'error' });
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -69,12 +78,37 @@ const Register = () => {
                 .min(6, 'Şifre en az 6 karakter olmalıdır')
                 .required('Şifre gereklidir')
             })}
-            onSubmit={(values) => {
-              console.log(values);
-              navigate('/login');
+            onSubmit={async (values, { setSubmitting, resetForm }) => {
+              try {
+                const response = await authService.register(values);
+                if (response.success) {
+                  // Başarılı kayıt mesajı göster
+                  setNotification({
+                    message: 'Kayıt başarılı! Giriş yapabilirsiniz.',
+                    severity: 'success'
+                  });
+                  setOpenSnackbar(true);
+                  
+                  // Formu temizle
+                  resetForm();
+                  
+                  // 2 saniye sonra login sayfasına yönlendir
+                  setTimeout(() => {
+                    navigate('/login');
+                  }, 2000);
+                }
+              } catch (err) {
+                setNotification({
+                  message: err.message || 'Kayıt olurken bir hata oluştu',
+                  severity: 'error'
+                });
+                setOpenSnackbar(true);
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
+            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
               <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
                 <TextField
                   margin="normal"
@@ -156,6 +190,7 @@ const Register = () => {
                   type="submit"
                   fullWidth
                   variant="contained"
+                  disabled={isSubmitting}
                   sx={{
                     mt: 3,
                     mb: 2,
@@ -169,7 +204,7 @@ const Register = () => {
                     }
                   }}
                 >
-                  Kayıt Ol
+                  {isSubmitting ? 'Kayıt Yapılıyor...' : 'Kayıt Ol'}
                 </Button>
 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
@@ -193,6 +228,17 @@ const Register = () => {
           </Formik>
         </Paper>
       </Box>
+
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
